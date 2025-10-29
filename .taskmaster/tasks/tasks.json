@@ -1,0 +1,44 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Validar entorno y variables (.env)",
+        "description": "Crear .env desde .env.example, definir OPENAI_API_KEY, LLM_PROVIDER y SYSTEM_PROMPT_PATH.",
+        "details": "Copiar .env.example a .env, completar claves, arrancar dev.",
+        "testStrategy": "Probar /health y /api/chat con mensaje simple.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Arrancar entorno local (dev)",
+        "description": "Ejecutar npm run dev para levantar backend y frontend con proxy Vite.",
+        "details": "Verificar http://localhost:8080/health y abrir http://localhost:5173/",
+        "testStrategy": "Asegurar que Chat envía y recibe respuesta mockeada si falta OPENAI_API_KEY.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Probar flujo E2E del chat",
+        "description": "Enviar mensaje desde UI y confirmar respuesta del backend via LLM o fallback.",
+        "details": "Usar sessionId=local-web, validar latencia <3s local.",
+        "testStrategy": "Verificar respuesta visible y sin errores en consola.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-10-29T19:25:37.366Z",
+      "description": "Default tasks context",
+      "updated": "2025-10-29T19:30:33.488Z"
+    }
+  }
+}
