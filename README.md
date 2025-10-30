@@ -1,99 +1,119 @@
-# ConversaX Agent Kit v1
+# Conversa Lite
 
-Sistema modular de agentes inteligentes para WhatsApp con integración OpenAI y Supabase.
+Plantilla mínima para un agente comercial único con memoria en sesión, soporte RAG sobre un catálogo JSON y un chat web listo para pruebas.
 
-## Características
+## Características principales
 
-- 🤖 Agentes modulares con roles personalizables (ventas, soporte, general)
-- 🧠 Integración con OpenAI (GPT-4o-mini)
-- 📊 Clasificación automática de leads (BANT)
-- 💾 Guardado de conversaciones en Supabase
-- 📱 Integración con Meta WhatsApp API
-- 🚀 Listo para desplegar en Netlify
+- 🤖 Agente único configurable mediante `src/agents/primary.json`.
+- 🧠 Memoria en sesiones usando almacenamiento en memoria (ideal para demos y desarrollo).
+- 📚 Recuperación de contexto (RAG) con embeddings de OpenAI sobre `src/data/catalogo.json`.
+- 💬 Interfaz web en React para conversar con el agente y probar cambios en vivo.
+- ⚙️ API REST `POST /api/chat` que también puede consumir cualquier otro cliente.
 
-## Estructura
+## Requisitos
+
+- Node.js 18+
+- Una clave válida de OpenAI (modelos `gpt-4o-mini` y `text-embedding-3-small`).
+
+## Configuración
+
+1. Instala dependencias del backend:
+   ```bash
+   npm install
+   ```
+2. Instala dependencias del frontend (solo la primera vez):
+   ```bash
+   npm run install:web
+   ```
+3. Crea tu archivo de entorno y agrega la clave de OpenAI:
+   ```bash
+   cp .env.example .env
+   ```
+   Edita `.env` y define `OPENAI_API_KEY`. Opcionalmente modifica `PORT`.
+
+## Ejecutar el proyecto
+
+1. Inicia la API:
+   ```bash
+   npm start
+   ```
+2. En otra terminal, levanta el chat web:
+   ```bash
+   cd web
+   npm run dev
+   ```
+3. Abre `http://localhost:5173` y empieza a conversar. El frontend guarda tus sesiones en `localStorage`.
+
+## Uso del catálogo (RAG)
+
+- Edita `src/data/catalogo.json` con tus productos.
+- Ejecuta el generador de embeddings para crear/actualizar el índice local:
+  ```bash
+  npm run seed:catalog
+  ```
+  Este comando crea `src/data/catalogIndex.json` para acelerar las búsquedas futuras.
+- Desde la interfaz web puedes activar o desactivar el uso del catálogo según la conversación.
+
+## API de chat
+
+`POST /api/chat`
+
+```json
+{
+  "sessionId": "session-123",
+  "message": "Hola, busco una laptop",
+  "useCatalog": true
+}
+```
+
+Respuesta:
+
+```json
+{
+  "reply": "¡Hola! ¿Qué tipo de laptop necesitas y para qué la usarás?",
+  "sessionId": "session-123",
+  "agent": {
+    "name": "Agente Comercial Inteligente",
+    "description": "Asistente único que comprende el catálogo, detecta intención de compra y guía a la persona usuaria hasta la conversión."
+  },
+  "memoryProvider": "in-memory",
+  "ragResults": [
+    {
+      "id": "prod-1",
+      "nombre": "Laptop XR",
+      "descripcion": "Equipo ligero con 16GB de RAM",
+      "precio": 1250,
+      "categoria": "Computadoras",
+      "score": 0.82
+    }
+  ]
+}
+```
+
+## Estructura relevante
 
 ```
 src/
-├── index.js              # Servidor principal
-├── routes/
-│   └── whatsapp.js       # Webhook de WhatsApp
-├── agents/
-│   ├── ventas.json       # Configuración agente de ventas
-│   ├── soporte.json      # Configuración agente de soporte
-│   └── general.json      # Configuración agente general
-├── services/
-│   ├── openaiService.js  # Comunicación con OpenAI
-│   ├── supabaseService.js# Guardado en Supabase
-│   └── bantScoring.js    # Evaluación de leads
-├── utils/
-│   └── messageParser.js  # Parser de mensajes
-└── data/
-    └── catalogo.json     # Catálogo de productos
+├── agents/primary.json        # Prompt y descripción del agente único
+├── config/index.js            # Carga de variables de entorno
+├── orchestrator/singleAgent.js# Orquestación del flujo agente + memoria + RAG
+├── rag/                       # Indexador y recuperador del catálogo
+├── routes/chat.js             # Endpoint REST del chat web
+├── services/openaiService.js  # Wrapper para chat y embeddings de OpenAI
+└── memory/index.js            # Implementación de memoria en sesiones
+
+web/
+├── src/App.tsx                # UI principal del chat
+├── src/api/client.ts          # Cliente para consumir `/api/chat`
+└── src/components/            # Componentes de la interfaz
 ```
 
-## Instalación
+## Scripts disponibles
 
-1. Instalar dependencias:
-```bash
-npm install
-```
-
-2. Configurar variables de entorno:
-```bash
-cp .env.example .env
-```
-
-Editar `.env` y agregar:
-- `OPENAI_API_KEY` (obligatoria)
-- `SUPABASE_URL`, `SUPABASE_KEY` o `SUPABASE_SERVICE_ROLE_KEY` (para guardar conversaciones)
-- `SUPABASE_ANON_KEY` (si usas autenticación pública)
-- `META_ACCESS_TOKEN`, `META_PHONE_ID`, `VERIFY_TOKEN` (solo si vas a conectar WhatsApp)
-- `PORT` (opcional, por defecto 3000)
-
-## Uso
-
-Generar embeddings del catálogo (opcional pero recomendado para producción):
-```bash
-npm run seed:catalog
-```
-
-Este comando lee `src/data/catalogo.json`, crea embeddings en OpenAI y guarda el índice en `src/data/catalogIndex.json`. Ejecútalo siempre que actualices el catálogo.
-
-Iniciar servidor:
-```bash
-npm start
-```
-
-El servidor correrá en `http://localhost:3000`
-
-## Webhook
-
-Configurar el webhook de WhatsApp para que apunte a:
-```
-POST https://tu-dominio.com/api/webhook
-```
-
-## Modo agente único
-
-Sigue estos pasos para trabajar con un único agente conversacional usando el chat web incluido:
-
-1. **Preparar el entorno**
-   - Crea tu archivo de variables con `cp .env.example .env` y completa las claves necesarias.
-   - Asegúrate de tener una clave válida en `OPENAI_API_KEY`; sin ella no se generarán respuestas ni embeddings.
-
-2. **Cargar el catálogo de productos**
-   - Actualiza `src/data/catalogo.json` con la lista de productos que quieras ofrecer.
-   - Ejecuta `npm run seed:catalog` para regenerar los embeddings y dejar el índice en `src/data/catalogIndex.json` (cada ítem consume una llamada de embeddings en OpenAI).
-
-3. **Afinar el prompt del agente**
-   - Edita `src/agents/ventas.json` (o el agente que vayas a usar) y personaliza el campo `prompt` para reflejar el tono y reglas de tu marca.
-   - Si cambias de agente predeterminado, actualiza el valor por defecto que envías en tus solicitudes (`agent: 'ventas'`).
-
-4. **Probar en el chat web**
-   - Inicia la API con `npm start` y deja el proceso corriendo.
-   - Instala las dependencias del front con `npm run install:web` (solo la primera vez) y luego levanta la interfaz con `cd web && npm run dev`.
-   - Abre `http://localhost:5173` en tu navegador, selecciona el agente, activa el catálogo si necesitas contexto de productos y envía un mensaje de prueba.
+- `npm start`: inicia el servidor Express.
+- `npm run install:web`: instala dependencias del frontend.
+- `npm run build:web`: compila el frontend en modo producción.
+- `npm run seed:catalog`: genera el índice de embeddings del catálogo.
 
 ## Licencia
 

@@ -10,10 +10,8 @@
     "seed:catalog": "node src/rag/seedCatalog.js"
   },
   "dependencies": {
-    "axios": "^1.7.0",
     "express": "^4.19.2",
     "openai": "^4.24.0",
-    "@supabase/supabase-js": "^2.42.0",
     "dotenv": "^16.3.1"
   }
 }

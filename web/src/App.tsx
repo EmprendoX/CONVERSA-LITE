@@ -1,15 +1,10 @@
-import { useCallback, useEffect, useMemo, useReducer } from 'react';
-import AgentSettings from './components/AgentSettings';
+import { useCallback, useEffect, useReducer } from 'react';
+import ChatControls from './components/ChatControls';
 import ChatWindow from './components/ChatWindow';
-import {
-  postChatMessage,
-  type ConversationMessage,
-  type MessageRole
-} from './api/client';
+import { postChatMessage, type ConversationMessage, type MessageRole } from './api/client';
 
 interface ChatState {
   sessionId: string;
-  agent: string;
   useCatalog: boolean;
   messages: ConversationMessage[];
   input: string;
@@ -18,15 +13,13 @@ interface ChatState {
 }
 
 interface StoredChatState {
-  agent: string;
   useCatalog: boolean;
   messages: ConversationMessage[];
 }
 
 const BASE_STATE: ChatState = {
   sessionId: '',
-  agent: 'general',
-  useCatalog: false,
+  useCatalog: true,
   messages: [],
   input: '',
   isLoading: false,
@@ -34,18 +27,16 @@ const BASE_STATE: ChatState = {
 };
 
 type ChatAction =
-  | { type: 'SET_AGENT'; agent: string }
   | { type: 'SET_USE_CATALOG'; useCatalog: boolean }
   | { type: 'SET_INPUT'; input: string }
   | { type: 'ADD_MESSAGE'; message: ConversationMessage }
   | { type: 'SET_LOADING'; isLoading: boolean }
   | { type: 'SET_ERROR'; error: string | null }
-  | { type: 'SET_SESSION_ID'; sessionId: string };
+  | { type: 'SET_SESSION_ID'; sessionId: string }
+  | { type: 'RESET_CONVERSATION'; sessionId: string };
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
-    case 'SET_AGENT':
-      return { ...state, agent: action.agent };
     case 'SET_USE_CATALOG':
       return { ...state, useCatalog: action.useCatalog };
     case 'SET_INPUT':
@@ -58,6 +49,14 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return { ...state, error: action.error };
     case 'SET_SESSION_ID':
       return { ...state, sessionId: action.sessionId };
+    case 'RESET_CONVERSATION':
+      return {
+        ...state,
+        sessionId: action.sessionId,
+        messages: [],
+        input: '',
+        error: null
+      };
     default:
       return state;
   }
@@ -72,28 +71,7 @@ const App = (): JSX.Element => {
     }
 
     persistState(state);
-  }, [state.sessionId, state.messages, state.agent, state.useCatalog]);
-
-  const agentOptions = useMemo(
-    () => [
-      {
-        value: 'ventas',
-        label: 'Ventas',
-        description: 'Optimizado para descubrir oportunidades, demos y cierres rápidos.'
-      },
-      {
-        value: 'soporte',
-        label: 'Soporte',
-        description: 'Ayuda a clientes con incidencias y seguimiento de casos.'
-      },
-      {
-        value: 'general',
-        label: 'General',
-        description: 'Asistente versátil para conversaciones abiertas con tus clientes.'
-      }
-    ],
-    []
-  );
+  }, [state.sessionId, state.messages, state.useCatalog]);
 
   const handleSendMessage = useCallback(async () => {
     const trimmedMessage = state.input.trim();
@@ -102,10 +80,6 @@ const App = (): JSX.Element => {
     }
 
     const userMessage = createMessage('user', trimmedMessage);
-    const history = [...state.messages, userMessage].map((message) => ({
-      role: message.role,
-      content: message.content
-    }));
 
     dispatch({ type: 'ADD_MESSAGE', message: userMessage });
     dispatch({ type: 'SET_INPUT', input: '' });
@@ -115,10 +89,8 @@ const App = (): JSX.Element => {
     try {
       const response = await postChatMessage({
         sessionId: state.sessionId,
-        agent: state.agent,
         useCatalog: state.useCatalog,
-        message: trimmedMessage,
-        history
+        message: trimmedMessage
       });
 
       if (response.sessionId && response.sessionId !== state.sessionId) {
@@ -137,37 +109,37 @@ const App = (): JSX.Element => {
     } finally {
       dispatch({ type: 'SET_LOADING', isLoading: false });
     }
-  }, [state.agent, state.input, state.isLoading, state.messages, state.sessionId, state.useCatalog]);
+  }, [state.input, state.isLoading, state.sessionId, state.useCatalog]);
 
   const handleInputChange = useCallback((value: string) => {
     dispatch({ type: 'SET_INPUT', input: value });
-  }, []);
-
-  const handleAgentChange = useCallback((agent: string) => {
-    dispatch({ type: 'SET_AGENT', agent });
   }, []);
 
   const handleCatalogToggle = useCallback((useCatalog: boolean) => {
     dispatch({ type: 'SET_USE_CATALOG', useCatalog });
   }, []);
 
+  const handleSessionReset = useCallback(() => {
+    const newSessionId = createSessionId();
+    dispatch({ type: 'RESET_CONVERSATION', sessionId: newSessionId });
+  }, []);
+
   return (
     <div className="app">
       <main className="app__card">
         <header className="app__header">
-          <h1 className="app__title">ConversaX Chat</h1>
+          <h1 className="app__title">Conversa Lite</h1>
           <p className="app__subtitle">
-            Gestiona tus conversaciones y activa el catálogo para potenciar las respuestas del agente.
+            Prueba el agente comercial único, agrega memoria por sesión y decide si quieres usar el catálogo como contexto.
           </p>
         </header>
 
         <div className="panel-grid">
-          <AgentSettings
-            agent={state.agent}
-            onAgentChange={handleAgentChange}
+          <ChatControls
+            sessionId={state.sessionId}
+            onSessionReset={handleSessionReset}
             useCatalog={state.useCatalog}
             onUseCatalogChange={handleCatalogToggle}
-            agentOptions={agentOptions}
           />
 
           <ChatWindow
@@ -200,7 +172,6 @@ function initializeState(): ChatState {
   return {
     ...BASE_STATE,
     sessionId,
-    agent: storedState?.agent ?? BASE_STATE.agent,
     useCatalog: storedState?.useCatalog ?? BASE_STATE.useCatalog,
     messages: storedState?.messages ?? BASE_STATE.messages
   };
@@ -241,7 +212,6 @@ function loadStoredState(sessionId: string): StoredChatState | null {
     const parsed = JSON.parse(raw) as Partial<StoredChatState>;
 
     return {
-      agent: typeof parsed.agent === 'string' ? parsed.agent : BASE_STATE.agent,
       useCatalog: typeof parsed.useCatalog === 'boolean' ? parsed.useCatalog : BASE_STATE.useCatalog,
       messages: sanitizeMessages(parsed.messages)
     };
@@ -295,7 +265,6 @@ function persistState(state: ChatState): void {
   }
 
   const payload: StoredChatState = {
-    agent: state.agent,
     useCatalog: state.useCatalog,
     messages: state.messages
   };

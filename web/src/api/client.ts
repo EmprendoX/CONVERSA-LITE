@@ -8,17 +8,27 @@ export interface ConversationMessage {
 }
 
 export interface ChatRequestPayload {
-  sessionId: string;
-  agent: string;
+  sessionId?: string;
   useCatalog: boolean;
   message: string;
-  history: Array<Pick<ConversationMessage, 'role' | 'content'>>;
 }
 
 export interface ChatResponsePayload {
   reply: string;
   sessionId: string;
-  metadata?: Record<string, unknown>;
+  agent?: {
+    name: string;
+    description: string;
+  };
+  memoryProvider?: string;
+  ragResults?: Array<{
+    id: string;
+    nombre: string;
+    descripcion?: string;
+    precio?: number;
+    categoria?: string;
+    score?: number;
+  }>;
 }
 
 const API_BASE_URL = '/api';

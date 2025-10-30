@@ -7,6 +7,7 @@ node_modules/
 # Build outputs
 dist/
 build/
+src/data/catalogIndex.json
 
 # Logs
 data/logs.json
