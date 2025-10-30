@@ -56,8 +56,24 @@ export async function createEmbedding(input, options = {}) {
   return response.data[0]?.embedding || [];
 }
 
+// Streaming de chat: devuelve un AsyncIterable con fragmentos de texto
+export async function createChatCompletionStream(messages, options = {}) {
+  const client = getOpenAIClient();
+  const stream = await client.chat.completions.create({
+    model: options.model || config.openai.defaultModel,
+    messages,
+    temperature: options.temperature ?? 0.7,
+    max_tokens: options.maxTokens,
+    stream: true
+  });
+
+  // El objeto `stream` es un AsyncIterable en el SDK oficial
+  return stream;
+}
+
 export default {
   getAgentProfile,
   createChatCompletion,
-  createEmbedding
+  createEmbedding,
+  createChatCompletionStream
 };

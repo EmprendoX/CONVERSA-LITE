@@ -42,11 +42,29 @@ async function persistIndex(index) {
 }
 
 function buildItemText(item) {
-  const parts = [item.nombre, item.descripcion, item.categoria ? `Categoría: ${item.categoria}` : null];
-  if (typeof item.precio !== "undefined") {
-    parts.push(`Precio: ${item.precio}`);
-  }
-  return parts.filter(Boolean).join(". ");
+  const normalize = (s) =>
+    String(s || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{Diacritic}+/gu, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const name = normalize(item.nombre);
+  const desc = normalize(item.descripcion);
+  const cat = normalize(item.categoria);
+  const price = typeof item.precio !== "undefined" ? `precio ${item.precio}` : "";
+
+  const weighted = [
+    // Ponderación simple: nombre aparece dos veces para dar más señal semántica
+    name,
+    name,
+    desc,
+    cat ? `categoria ${cat}` : null,
+    price || null
+  ].filter(Boolean);
+
+  return weighted.join(". ");
 }
 
 export async function buildCatalogIndex({ forceRebuild = false, persist = true } = {}) {

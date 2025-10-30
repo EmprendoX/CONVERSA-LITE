@@ -7,8 +7,8 @@ Plantilla mínima para un agente comercial único con memoria en sesión, soport
 - 🤖 Agente único configurable mediante `src/agents/primary.json`.
 - 🧠 Memoria en sesiones usando almacenamiento en memoria (ideal para demos y desarrollo).
 - 📚 Recuperación de contexto (RAG) con embeddings de OpenAI sobre `src/data/catalogo.json`.
-- 💬 Interfaz web en React para conversar con el agente y probar cambios en vivo.
-- ⚙️ API REST `POST /api/chat` que también puede consumir cualquier otro cliente.
+- 💬 Interfaz web en React con streaming de tokens (SSE) y feedback por mensaje.
+- ⚙️ API REST `POST /api/chat` y `POST /api/chat/stream` (SSE).
 
 ## Requisitos
 
@@ -29,7 +29,11 @@ Plantilla mínima para un agente comercial único con memoria en sesión, soport
    ```bash
    cp .env.example .env
    ```
-   Edita `.env` y define `OPENAI_API_KEY`. Opcionalmente modifica `PORT`.
+   Edita `.env` y define:
+   - `OPENAI_API_KEY`
+   - `PORT` (opcional)
+   - `RATE_LIMIT_PER_MIN` (opcional, por defecto 60)
+   - `MODERATION_ENABLED` (`true|false`)
 
 ## Ejecutar el proyecto
 
@@ -64,6 +68,32 @@ Plantilla mínima para un agente comercial único con memoria en sesión, soport
   "message": "Hola, busco una laptop",
   "useCatalog": true
 }
+```
+
+`POST /api/chat/stream` (SSE)
+
+- Content-Type: `application/json`
+- Respuesta: `text/event-stream` con eventos `data: { delta?: string, done?: boolean }`
+
+Ejemplo de consumo en el navegador (simplificado):
+
+```ts
+const res = await fetch('/api/chat/stream', { method: 'POST', body: JSON.stringify({ message: 'hola', useCatalog: true }) });
+const reader = res.body!.getReader();
+const decoder = new TextDecoder();
+let acc = '';
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  const chunk = decoder.decode(value);
+  // parsear líneas `data: {"delta":"..."}`
+}
+```
+
+`POST /api/chat/feedback`
+
+```json
+{ "sessionId": "...", "messageId": "...", "rating": "up" }
 ```
 
 Respuesta:
@@ -104,7 +134,7 @@ src/
 
 web/
 ├── src/App.tsx                # UI principal del chat
-├── src/api/client.ts          # Cliente para consumir `/api/chat`
+├── src/api/client.ts          # Cliente para `/api/chat` y `/api/chat/stream`
 └── src/components/            # Componentes de la interfaz
 ```
 
@@ -114,6 +144,31 @@ web/
 - `npm run install:web`: instala dependencias del frontend.
 - `npm run build:web`: compila el frontend en modo producción.
 - `npm run seed:catalog`: genera el índice de embeddings del catálogo.
+
+## Widget embebible
+
+Incluye un botón flotante que abre el chat en un iframe, configurable por atributos `data-`.
+
+1. Añade el script a tu sitio:
+
+```html
+<script
+  src="https://tu-dominio.com/widget.js"
+  data-title="¿Hablamos?"
+  data-color="#22c55e"
+  data-position="bottom-right"
+  data-greet="Hola 👋"
+  async
+></script>
+```
+
+2. Opciones:
+- `data-title`: texto del botón
+- `data-color`: color del botón (hex)
+- `data-position`: `bottom-right` | `bottom-left`
+- `data-greet`: saludo inicial (opcional)
+
+El widget se sirve desde `GET /widget.js`.
 
 ## Licencia
 

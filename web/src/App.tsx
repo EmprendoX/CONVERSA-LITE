@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useReducer } from 'react';
 import ChatControls from './components/ChatControls';
 import ChatWindow from './components/ChatWindow';
-import { postChatMessage, type ConversationMessage, type MessageRole } from './api/client';
+import AdminPanel from './components/AdminPanel';
+import { postChatMessage, streamChatMessage, type ConversationMessage, type MessageRole } from './api/client';
 
 interface ChatState {
   sessionId: string;
@@ -33,7 +34,8 @@ type ChatAction =
   | { type: 'SET_LOADING'; isLoading: boolean }
   | { type: 'SET_ERROR'; error: string | null }
   | { type: 'SET_SESSION_ID'; sessionId: string }
-  | { type: 'RESET_CONVERSATION'; sessionId: string };
+  | { type: 'RESET_CONVERSATION'; sessionId: string }
+  | { type: 'UPDATE_LAST_ASSISTANT'; content: string };
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
@@ -57,6 +59,16 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         input: '',
         error: null
       };
+    case 'UPDATE_LAST_ASSISTANT': {
+      const messages = [...state.messages];
+      for (let i = messages.length - 1; i >= 0; i -= 1) {
+        if (messages[i].role === 'assistant') {
+          messages[i] = { ...messages[i], content: action.content };
+          break;
+        }
+      }
+      return { ...state, messages };
+    }
     default:
       return state;
   }
@@ -87,22 +99,27 @@ const App = (): JSX.Element => {
     dispatch({ type: 'SET_ERROR', error: null });
 
     try {
-      const response = await postChatMessage({
+      // Mensaje del asistente en streaming
+      const assistantMessage = createMessage('assistant', '');
+      dispatch({ type: 'ADD_MESSAGE', message: assistantMessage });
+
+      let accumulated = '';
+      for await (const evt of streamChatMessage({
         sessionId: state.sessionId,
         useCatalog: state.useCatalog,
         message: trimmedMessage
-      });
-
-      if (response.sessionId && response.sessionId !== state.sessionId) {
-        dispatch({ type: 'SET_SESSION_ID', sessionId: response.sessionId });
+      })) {
+        if (evt.sessionId && evt.sessionId !== state.sessionId) {
+          dispatch({ type: 'SET_SESSION_ID', sessionId: evt.sessionId });
+        }
+        if (evt.delta) {
+          accumulated += evt.delta;
+          dispatch({ type: 'UPDATE_LAST_ASSISTANT', content: accumulated });
+        }
+        if (evt.error) {
+          throw new Error(evt.error);
+        }
       }
-
-      if (!response.reply || typeof response.reply !== 'string') {
-        throw new Error('La respuesta del servidor no es válida.');
-      }
-
-      const assistantMessage = createMessage('assistant', response.reply);
-      dispatch({ type: 'ADD_MESSAGE', message: assistantMessage });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Ocurrió un error inesperado.';
       dispatch({ type: 'SET_ERROR', error: message });
@@ -150,6 +167,7 @@ const App = (): JSX.Element => {
             isLoading={state.isLoading}
             error={state.error}
           />
+          <AdminPanel />
         </div>
       </main>
     </div>

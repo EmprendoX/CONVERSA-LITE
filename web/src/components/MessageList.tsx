@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import type { ConversationMessage } from '../api/client';
+import { postFeedback } from '../api/client';
 
 interface MessageListProps {
   messages: ConversationMessage[];
@@ -34,6 +35,28 @@ const MessageList: FC<MessageListProps> = ({ messages }) => {
                 {label} · {formattedTime}
               </header>
               <p>{message.content}</p>
+              <footer className="message__actions" aria-label="Acciones del mensaje">
+                {!isUser ? (
+                  <>
+                    <button
+                      className="message__action"
+                      type="button"
+                      aria-label="Útil"
+                      onClick={() => safeSendFeedback(message.id, 'up')}
+                    >
+                      👍
+                    </button>
+                    <button
+                      className="message__action"
+                      type="button"
+                      aria-label="No útil"
+                      onClick={() => safeSendFeedback(message.id, 'down')}
+                    >
+                      👎
+                    </button>
+                  </>
+                ) : null}
+              </footer>
             </article>
           );
         })
@@ -51,3 +74,13 @@ function formatTimestamp(timestamp: number): string {
 }
 
 export default MessageList;
+
+async function safeSendFeedback(messageId: string, rating: 'up' | 'down') {
+  try {
+    const sessionId = window.localStorage.getItem('chat:activeSession') || '';
+    if (!sessionId) return;
+    await postFeedback({ sessionId, messageId, rating });
+  } catch {
+    // noop
+  }
+}
