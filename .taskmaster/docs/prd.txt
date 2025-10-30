@@ -1,0 +1,36 @@
+Agente Único Venta/Soporte con RAG y Panel Admin
+
+Objetivo
+- Un chat en español para ventas y soporte con respuestas en el estilo/tamaño que el cliente requiera.
+- RAG sobre catálogo editable desde UI; prompt editable desde UI.
+- Streaming (SSE) y feedback por respuesta.
+
+Alcance (v1)
+- Prompt editable: nombre/descr/prompt via Admin UI.
+- Catálogo JSON editable via Admin UI; botón “Regenerar índice” para RAG.
+- Chat: memoria por sesión, toggle “Usar catálogo (RAG)”, SSE.
+- Mostrar “Productos sugeridos” cuando RAG esté ON (nombre, atributo, precio si existe, score).
+- Feedback 👍/👎 almacenado localmente.
+
+Requisitos
+- No inventar precios ni políticas; si falta info, pedir el mínimo.
+- Permitir configurar el tono/longitud desde el prompt (sin imponer límites fijos).
+- `.env` con `OPENAI_API_KEY`; rate limit básico.
+
+Criterios de aceptación
+- Admin puede editar prompt y catálogo desde UI y ver confirmación de guardado.
+- Al pulsar “Regenerar índice”, RAG se actualiza y afecta la siguiente respuesta.
+- Chat soporta SSE; la respuesta se pinta de forma incremental.
+- Toggle “Usar catálogo (RAG)” activa/desactiva el contexto del catálogo.
+- Se muestran “Productos sugeridos” cuando RAG está ON (nombre, atributo, precio si existe, score).
+Entregables
+- Código backend con endpoints /api/chat, /api/chat/stream, /api/admin/*.
+- Frontend con chat + panel Admin y widget embebible.
+- README con pasos de instalación y operación.
+
+Entradas/Salidas
+- Entradas: `primary.json`, `catalogo.json`.
+- Salidas: `catalogIndex.json` (RAG), `logs/feedback.json` (local).
+
+No incluido v1
+- Moderación avanzada, auth, DB persistente.

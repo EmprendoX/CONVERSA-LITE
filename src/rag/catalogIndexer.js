@@ -9,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const catalogPath = path.resolve(__dirname, "../data/catalogo.json");
 const indexPath = path.resolve(__dirname, "../data/catalogIndex.json");
+const productsPath = path.resolve(__dirname, "../data/products.json");
 
 async function ensureDataDir() {
   const dataDir = path.dirname(catalogPath);
@@ -19,6 +20,16 @@ async function loadCatalog() {
   const raw = await fs.readFile(catalogPath, "utf8");
   const catalog = JSON.parse(raw);
   return catalog.productos || [];
+}
+
+async function loadProducts() {
+  try {
+    const raw = await fs.readFile(productsPath, "utf8");
+    const products = JSON.parse(raw);
+    return products.products || [];
+  } catch (e) {
+    return [];
+  }
 }
 
 async function loadStoredIndex() {
@@ -67,6 +78,31 @@ function buildItemText(item) {
   return weighted.join(". ");
 }
 
+function buildProductText(product) {
+  const normalize = (s) =>
+    String(s || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{Diacritic}+/gu, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const name = normalize(product.name);
+  const title = normalize(product.title);
+  const subtitle = normalize(product.subtitle);
+  const desc = normalize(product.description);
+
+  const weighted = [
+    name,
+    title,
+    title, // title repetido para más peso
+    subtitle,
+    desc
+  ].filter(Boolean);
+
+  return weighted.join(". ");
+}
+
 export async function buildCatalogIndex({ forceRebuild = false, persist = true } = {}) {
   if (cachedIndex && !forceRebuild) {
     return cachedIndex;
@@ -81,6 +117,7 @@ export async function buildCatalogIndex({ forceRebuild = false, persist = true }
   }
 
   const items = await loadCatalog();
+  const products = await loadProducts();
   const index = [];
 
   for (const item of items) {
@@ -92,6 +129,25 @@ export async function buildCatalogIndex({ forceRebuild = false, persist = true }
     index.push({
       id: item.id ?? item.nombre,
       item,
+      embedding
+    });
+  }
+
+  for (const product of products) {
+    const text = buildProductText(product);
+    if (!text) {
+      continue;
+    }
+    const embedding = await createEmbedding(text);
+    index.push({
+      id: product.id,
+      item: {
+        id: product.id,
+        nombre: product.title || product.name,
+        descripcion: product.description || product.subtitle || '',
+        categoria: '',
+        precio: undefined
+      },
       embedding
     });
   }

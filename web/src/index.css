@@ -34,11 +34,12 @@ body {
 .app__card {
   width: 100%;
   max-width: 980px;
+  margin: 0 auto;
   background: rgba(15, 23, 42, 0.78);
   border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 24px;
+  border-radius: 8px;
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.45);
-  padding: 2.5rem;
+  padding: 2rem;
   display: flex;
   flex-direction: column;
   gap: 2rem;
@@ -67,7 +68,7 @@ body {
 
 .panel-grid {
   display: grid;
-  grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 2rem;
 }
 
@@ -86,7 +87,7 @@ body {
   flex-direction: column;
   gap: 1.5rem;
   background: rgba(30, 41, 59, 0.65);
-  border-radius: 20px;
+  border-radius: 8px;
   padding: 1.5rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
 }
@@ -116,9 +117,11 @@ body {
   gap: 0.75rem;
   background: rgba(15, 23, 42, 0.75);
   border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 1rem;
 }
+
+/* sin grid en chat-controls; sólo columna para mantener comportamiento con scroll */
 
 .chat-controls__label {
   font-size: 0.75rem;
@@ -132,7 +135,7 @@ body {
   font-size: 0.85rem;
   color: rgba(226, 232, 240, 0.95);
   background: rgba(30, 41, 59, 0.9);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 0.75rem 1rem;
   word-break: break-all;
 }
@@ -180,13 +183,15 @@ body {
 
 .chat-window {
   background: rgba(15, 23, 42, 0.55);
-  border-radius: 20px;
+  border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  min-height: 520px;
+  /* Altura fija responsiva para forzar scroll interno */
+  height: clamp(500px, 65vh, 740px);
+  max-height: 75vh;
 }
 
 .chat-window__content {
@@ -195,6 +200,8 @@ body {
   gap: 1.5rem;
   flex: 1 1 auto;
   min-height: 0;
+  /* Evita que crezca y empuje al formulario; scroll vive en .message-list */
+  overflow: hidden;
 }
 
 .message-list {
@@ -209,7 +216,7 @@ body {
 .message {
   max-width: 80%;
   padding: 0.85rem 1.1rem;
-  border-radius: 18px;
+  border-radius: 8px;
   font-size: 0.975rem;
   line-height: 1.5;
   display: flex;
@@ -257,7 +264,7 @@ body {
   min-height: 80px;
   max-height: 220px;
   padding: 0.9rem 1rem;
-  border-radius: 16px;
+  border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: rgba(15, 23, 42, 0.75);
   color: #f8fafc;
@@ -318,4 +325,338 @@ body {
 .chat-window__error {
   font-size: 0.85rem;
   color: #fca5a5;
+}
+
+/* Admin panel – credentials layout */
+.admin {
+  background: rgba(30, 41, 59, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.admin__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.admin__card {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin__card--full {
+  grid-column: 1 / -1;
+}
+
+.admin__card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.admin__card input,
+.admin__card textarea {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.75);
+  color: #f8fafc;
+}
+
+.admin__actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.admin__card button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  background: rgba(129, 140, 248, 0.25);
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.admin__hint { color: rgba(148,163,184,.8); font-size: .9rem; margin-top: .5rem; }
+
+/* Widget generator */
+.admin-widget .admin__grid { grid-template-columns: 1fr 1fr !important; margin-bottom: 1rem; width: 100%; gap: 2rem !important; }
+.admin-widget__form { 
+  display: grid; 
+  grid-template-columns: 1fr 1fr !important; 
+  gap: 1.5rem !important; 
+  width: 100%;
+  align-items: start;
+}
+.admin-widget__form .creds__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.admin-widget__form input[type="color"] {
+  height: 3rem;
+  cursor: pointer;
+}
+.admin-widget textarea { 
+  width: 100%; 
+  padding: 1rem; 
+  border-radius: 8px; 
+  border: 2px solid rgba(148, 163, 184, 0.35); 
+  background: rgba(15, 23, 42, 0.75); 
+  color: #f8fafc; 
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+@media (max-width: 900px) { 
+  .admin-widget .admin__grid { grid-template-columns: 1fr !important; }
+  .admin-widget__form { grid-template-columns: 1fr !important; }
+}
+.admin-widget__preview { margin-top: 1.5rem; clear: both; position: relative; z-index: 1; }
+.admin-widget__preview iframe { background: #0b1120; }
+
+/* RAG Suggested Products */
+.suggested {
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.suggested__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.suggested__item {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+  padding: 0.85rem;
+}
+
+.suggested__name {
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 0.35rem;
+}
+
+.suggested__meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+}
+
+.suggested__cat, .suggested__price, .suggested__score {
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.suggested__desc {
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.8);
+  margin-top: 0.35rem;
+}
+
+/* Public products */
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 1rem; }
+.card { background: rgba(15,23,42,.65); border: 1px solid rgba(148,163,184,.25); border-radius: 12px; padding: .75rem; cursor: pointer; }
+.card img { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; }
+.product-detail .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.product-detail .gallery img { width: 100%; border-radius: 8px; border: 1px solid rgba(148,163,184,.25); margin-bottom: .5rem; }
+@media (max-width: 900px) { .product-detail .detail-grid { grid-template-columns: 1fr; } }
+
+@media (max-width: 900px) {
+  .admin__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Admin products */
+.admin-products .product-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-products .product-list li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-products .product-list li button:first-child {
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.admin-products .product-list li .muted { color: rgba(148,163,184,.7); font-size: .85rem; }
+
+.admin-products .product-thumb {
+  display: flex; flex-direction: column; gap: .25rem;
+}
+.admin-products .product-thumb img { width: 100%; max-height: 140px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(148,163,184,.2); }
+
+/* Forzar una sola columna en la sección de Productos para evitar el hueco a la derecha */
+.admin-products .admin__grid { grid-template-columns: 1fr !important; width: 100%; }
+
+.product-table { width: 100%; border-collapse: collapse; }
+.product-table th, .product-table td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid rgba(148,163,184,.15); }
+.product-table .linklike { background: transparent; border: none; color: #e2e8f0; cursor: pointer; padding: 0; }
+.admin-credentials {
+  background: rgba(15, 23, 42, 0.55);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.creds__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.creds__tab {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.6);
+  color: #e2e8f0;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.creds__tab.is-active {
+  background: rgba(129, 140, 248, 0.25);
+  border-color: rgba(129, 140, 248, 0.5);
+}
+
+/* Two columns grid for inputs */
+.creds__form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  align-items: start;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .creds__form {
+    grid-template-columns: 1fr;
+  }
+}
+
+.creds__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.creds__field input,
+.creds__field select {
+  width: 100%;
+  padding: 0.9rem 1.1rem;
+  border-radius: 8px;
+  border: 2px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.75);
+  color: #f8fafc;
+  font-size: 0.975rem;
+  font-weight: 500;
+}
+
+.creds__field input:focus,
+.creds__field select:focus {
+  outline: none;
+  border-color: rgba(129, 140, 248, 0.7);
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+}
+
+.creds__actions {
+  display: flex;
+  gap: 0.6rem;
+  grid-column: 1 / -1; /* que los botones ocupen la fila completa */
+  justify-content: flex-start;
+}
+
+.creds__actions button,
+.creds__quick-actions button {
+  border: 2px solid rgba(129, 140, 248, 0.35);
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  background: rgba(129, 140, 248, 0.25);
+  color: #e2e8f0;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.creds__actions button:hover,
+.creds__quick-actions button:hover {
+  background: rgba(129, 140, 248, 0.35);
+  border-color: rgba(129, 140, 248, 0.5);
+  transform: translateY(-1px);
+}
+
+.creds__quick {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+.creds__quick-actions {
+  display: flex;
+  gap: 0.5rem;
+  grid-column: 1 / -1; /* acciones a lo ancho, debajo de text */
+}
+
+.creds__quick > button[type="button"] {
+  grid-column: 1 / -1; /* botón de media a lo ancho */
+  justify-self: start;
+}
+
+
+.creds__quick > label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.creds__logs {
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
 }

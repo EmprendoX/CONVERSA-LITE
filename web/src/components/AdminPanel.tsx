@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { getAdminPrompt, saveAdminPrompt, getAdminCatalog, saveAdminCatalog, adminSeed } from '../api/client';
+import { getAdminPrompt, saveAdminPrompt } from '../api/client';
+import AdminCredentials from './AdminCredentials';
+import AdminProducts from './AdminProducts';
+import AdminWidget from './AdminWidget';
 
 const AdminPanel = (): JSX.Element => {
   const [loading, setLoading] = useState(false);
@@ -10,8 +13,6 @@ const AdminPanel = (): JSX.Element => {
   const [description, setDescription] = useState('');
   const [prompt, setPrompt] = useState('');
 
-  const [catalog, setCatalog] = useState<string>('');
-
   useEffect(() => {
     void (async () => {
       try {
@@ -20,8 +21,6 @@ const AdminPanel = (): JSX.Element => {
         setName(p.name || '');
         setDescription(p.description || '');
         setPrompt(p.prompt || '');
-        const c = await getAdminCatalog();
-        setCatalog(formatJson(c));
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Error cargando datos');
       } finally {
@@ -43,37 +42,12 @@ const AdminPanel = (): JSX.Element => {
     }
   };
 
-  const handleSaveCatalog = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      await saveAdminCatalog(catalog);
-      setOk('Catálogo guardado');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo guardar el catálogo');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSeed = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await adminSeed();
-      setOk(`Índice regenerado (${res.items} items)`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo regenerar el índice');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <section className="admin" aria-labelledby="admin-title">
       <header className="admin__header">
         <h2 id="admin-title">Administración</h2>
-        <p>Edita el prompt y el catálogo sin tocar archivos. Luego regenera el índice.</p>
+        <p>Edita el prompt del agente y gestiona productos desde aquí.</p>
       </header>
 
       {loading ? <p className="admin__status">Procesando…</p> : null}
@@ -81,7 +55,7 @@ const AdminPanel = (): JSX.Element => {
       {ok ? <p className="admin__ok">{ok}</p> : null}
 
       <div className="admin__grid">
-        <div className="admin__card">
+        <div className="admin__card admin__card--full">
           <h3>Prompt del agente</h3>
           <label>
             Nombre
@@ -98,26 +72,20 @@ const AdminPanel = (): JSX.Element => {
           <button type="button" onClick={handleSavePrompt} disabled={loading}>Guardar prompt</button>
         </div>
 
-        <div className="admin__card">
-          <h3>Catálogo (JSON)</h3>
-          <textarea rows={16} value={catalog} onChange={(e) => setCatalog(e.target.value)} />
-          <div className="admin__actions">
-            <button type="button" onClick={handleSaveCatalog} disabled={loading}>Guardar catálogo</button>
-            <button type="button" onClick={handleSeed} disabled={loading}>Regenerar índice</button>
-          </div>
+        <div className="admin__card admin__card--full">
+          <AdminProducts />
+        </div>
+
+        <div className="admin__card admin__card--full">
+          <AdminCredentials />
+        </div>
+
+        <div className="admin__card admin__card--full">
+          <AdminWidget />
         </div>
       </div>
     </section>
   );
 };
-
-function formatJson(input: string): string {
-  try {
-    const parsed = JSON.parse(input);
-    return JSON.stringify(parsed, null, 2);
-  } catch {
-    return input;
-  }
-}
 
 export default AdminPanel;

@@ -1,14 +1,20 @@
 import { Router } from "express";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
 import { randomUUID } from "crypto";
 import runSingleAgent from "../orchestrator/singleAgent.js";
 import { getAgentProfile, createChatCompletionStream } from "../services/openaiService.js";
 import memory from "../memory/index.js";
 import { retrieveRelevantItems } from "../rag/retriever.js";
 import { config } from "../config/index.js";
+import { sanitizeText, validateChatPayload, validateFeedbackPayload } from "../utils/validators.js";
 
 const router = Router();
 
 router.post("/chat", async (req, res) => {
+  const errors = validateChatPayload(req.body || {});
+  if (errors.length) return res.status(400).json({ error: errors.join(", ") });
   const { message, sessionId, topK, useCatalog = true } = req.body || {};
   if (config.server.moderationEnabled) {
     if (isFlagged(trimmedMessage)) {
@@ -20,7 +26,7 @@ router.post("/chat", async (req, res) => {
     return res.status(400).json({ error: "El campo 'message' es obligatorio" });
   }
 
-  const trimmedMessage = message.trim();
+  const trimmedMessage = sanitizeText(message, 4000);
   if (!trimmedMessage) {
     return res.status(400).json({ error: "El mensaje no puede estar vacío" });
   }
@@ -87,6 +93,11 @@ export default router;
 
 // Streaming SSE
 router.post("/chat/stream", async (req, res) => {
+  const errors = validateChatPayload(req.body || {});
+  if (errors.length) {
+    res.status(400).setHeader("Content-Type", "application/json");
+    return res.end(JSON.stringify({ error: errors.join(", ") }));
+  }
   const { message, sessionId, topK, useCatalog = true } = req.body || {};
 
   if (!message || typeof message !== "string") {
@@ -94,7 +105,7 @@ router.post("/chat/stream", async (req, res) => {
     return res.end(JSON.stringify({ error: "El campo 'message' es obligatorio" }));
   }
 
-  const trimmedMessage = message.trim();
+  const trimmedMessage = sanitizeText(message, 4000);
   if (!trimmedMessage) {
     res.status(400).setHeader("Content-Type", "application/json");
     return res.end(JSON.stringify({ error: "El mensaje no puede estar vacío" }));
@@ -190,6 +201,8 @@ function isFlagged(text) {
 
 // Feedback de calidad por mensaje
 router.post("/chat/feedback", async (req, res) => {
+  const errors = validateFeedbackPayload(req.body || {});
+  if (errors.length) return res.status(400).json({ error: errors.join(", ") });
   const { sessionId, messageId, rating, comment } = req.body || {};
   if (!sessionId || !messageId || (rating !== "up" && rating !== "down")) {
     return res.status(400).json({ error: "Campos requeridos: sessionId, messageId, rating ('up'|'down')" });
@@ -202,11 +215,38 @@ router.post("/chat/feedback", async (req, res) => {
       comment: typeof comment === "string" && comment.trim() ? comment.trim() : undefined,
       createdAt: new Date().toISOString()
     };
-    // Para v1: registrar en consola; se puede conectar a un almacenamiento luego
     console.log("[feedback]", JSON.stringify(payload));
+    await appendFeedback(payload);
     return res.json({ ok: true });
   } catch (error) {
     console.error("Error en /api/chat/feedback:", error);
     return res.status(500).json({ error: "No se pudo registrar el feedback" });
   }
 });
+
+// --- Feedback persistence (JSON Lines) with simple rotation ---
+const __filename_fb = fileURLToPath(import.meta.url);
+const __dirname_fb = path.dirname(__filename_fb);
+const logsDir = path.resolve(__dirname_fb, "../..", "logs");
+const feedbackPath = path.join(logsDir, "feedback.jsonl");
+const MAX_FILE_BYTES = 1_000_000; // ~1MB
+
+async function appendFeedback(entry) {
+  await fs.mkdir(logsDir, { recursive: true });
+  try {
+    const line = JSON.stringify(entry) + "\n";
+    // rotate if needed
+    try {
+      const stat = await fs.stat(feedbackPath);
+      if (stat.size + Buffer.byteLength(line) > MAX_FILE_BYTES) {
+        const rotated = path.join(logsDir, `feedback-${Date.now()}.jsonl`);
+        await fs.rename(feedbackPath, rotated);
+      }
+    } catch (e) {
+      // if ENOENT, ignore
+    }
+    await fs.appendFile(feedbackPath, line, "utf8");
+  } catch (e) {
+    console.warn("No se pudo persistir feedback:", e.message);
+  }
+}

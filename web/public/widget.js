@@ -7,6 +7,7 @@
   const position = cfg('position', 'bottom-right'); // bottom-right | bottom-left
   const greet = cfg('greet', 'Hola 👋 ¿En qué puedo ayudarte hoy?');
   const host = cfg('host', window.location.origin);
+  const apiBase = cfg('api-base', '/api/public');
 
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -52,7 +53,10 @@
     frame.style.right = '20px';
   }
   frame.style.bottom = '72px';
-  frame.src = `${host}`;
+  const url = new URL(host);
+  if (!url.searchParams.get('apiBase')) url.searchParams.set('apiBase', apiBase);
+  url.searchParams.set('embed', '1');
+  frame.src = url.toString();
 
   function open() {
     overlay.style.display = 'block';

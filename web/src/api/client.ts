@@ -31,7 +31,18 @@ export interface ChatResponsePayload {
   }>;
 }
 
-const API_BASE_URL = '/api';
+// Permite sobreescribir el API base vía query param (?apiBase=/api/public) o variable global (para widget)
+const API_BASE_URL = ((): string => {
+  if (typeof window !== 'undefined') {
+    try {
+      const baseFromQuery = new URLSearchParams(window.location.search).get('apiBase');
+      // @ts-ignore
+      const baseFromGlobal = (window as any).__CHAT_BASE as string | undefined;
+      return (baseFromQuery || baseFromGlobal || '/api');
+    } catch {}
+  }
+  return '/api';
+})();
 
 export async function postChatMessage(
   payload: ChatRequestPayload,
@@ -133,6 +144,84 @@ export async function getAdminPrompt(): Promise<{ name: string; description: str
   return res.json();
 }
 
+// Calendar APIs
+export async function getCalendarAuthUrl(): Promise<{ url: string }> {
+  const res = await fetch(`${API_BASE_URL}/calendar/auth-url`);
+  if (!res.ok) throw new Error(`Error obteniendo auth-url (${res.status})`);
+  return res.json();
+}
+
+export async function getAvailability(params: { from: string; to: string }): Promise<{ timeMin: string; timeMax: string; busy: Array<{ start: string; end: string }> }> {
+  const q = new URLSearchParams(params).toString();
+  const res = await fetch(`${API_BASE_URL}/calendar/availability?${q}`);
+  if (!res.ok) throw new Error(`Error disponibilidad (${res.status})`);
+  return res.json();
+}
+
+export async function createCalendarEvent(payload: { summary: string; description?: string; startISO: string; endISO: string; attendees?: Array<{ email: string }> }): Promise<{ id: string }> {
+  const res = await fetch(`${API_BASE_URL}/calendar/events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`Error creando evento (${res.status})`);
+  return res.json();
+}
+
+export async function deleteCalendarEvent(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/calendar/events/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`Error cancelando evento (${res.status})`);
+}
+
+// Admin Credentials APIs
+export type Provider = 'google' | 'twilio' | 'meta' | 'vapi' | 'elevenlabs';
+
+export async function getCredentials(masked = true): Promise<Record<string, Record<string, string>>> {
+  const res = await fetch(`${API_BASE_URL}/admin/credentials/`);
+  if (!res.ok) throw new Error(`Error leyendo credenciales (${res.status})`);
+  return res.json();
+}
+
+export async function saveCredentialsApi(provider: Provider, data: Record<string, string>): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/admin/credentials/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, data })
+  });
+  if (!res.ok) throw new Error(`Error guardando credenciales (${res.status})`);
+}
+
+export async function validateCredentialsApi(provider: Provider): Promise<{ ok: boolean; details?: string }> {
+  const res = await fetch(`${API_BASE_URL}/admin/credentials/validate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider })
+  });
+  if (!res.ok) throw new Error(`Error validando credenciales (${res.status})`);
+  return res.json();
+}
+
+// Quick test senders
+export async function waSend(payload: { to: string; text?: string; mediaUrl?: string; caption?: string; templateText?: string }): Promise<unknown> {
+  const res = await fetch(`${API_BASE_URL}/wa/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`WA send error (${res.status})`);
+  return res.json();
+}
+
+export async function metaSend(payload: { to: string; text?: string; mediaUrl?: string; caption?: string; type?: string; template?: { name: string; language?: string; components?: unknown[] } }): Promise<unknown> {
+  const res = await fetch(`${API_BASE_URL}/meta/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`Meta send error (${res.status})`);
+  return res.json();
+}
+
 export async function saveAdminPrompt(data: { name?: string; description?: string; prompt: string }): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/admin/prompt`, {
     method: 'POST',
@@ -166,6 +255,65 @@ export async function saveAdminCatalog(rawJson: string): Promise<void> {
 export async function adminSeed(): Promise<{ ok: boolean; items: number }> {
   const res = await fetch(`${API_BASE_URL}/admin/seed`, { method: 'POST' });
   if (!res.ok) throw new Error(`Error regenerando índice (${res.status})`);
+  return res.json();
+}
+
+// Products APIs
+export interface Product {
+  id: string;
+  name: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  images: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export async function listProductsApi(): Promise<{ products: Product[] }> {
+  const res = await fetch(`${API_BASE_URL}/products`);
+  if (!res.ok) throw new Error(`Error listando productos (${res.status})`);
+  return res.json();
+}
+
+export async function createProductApi(payload: { name: string; title: string; subtitle?: string; description?: string }): Promise<Product> {
+  const res = await fetch(`${API_BASE_URL}/products`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`Error creando producto (${res.status})`);
+  return res.json();
+}
+
+export async function updateProductApi(id: string, payload: Partial<Product>): Promise<Product> {
+  const res = await fetch(`${API_BASE_URL}/products/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`Error actualizando producto (${res.status})`);
+  return res.json();
+}
+
+export async function uploadProductImageApi(id: string, dataUrl: string): Promise<{ url: string }> {
+  const res = await fetch(`${API_BASE_URL}/products/${encodeURIComponent(id)}/images`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataUrl })
+  });
+  if (!res.ok) throw new Error(`Error subiendo imagen (${res.status})`);
+  return res.json();
+}
+
+export async function deleteProductApi(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/products/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`Error eliminando producto (${res.status})`);
+}
+
+export async function getProductApi(id: string): Promise<Product> {
+  const res = await fetch(`${API_BASE_URL}/products/${encodeURIComponent(id)}`);
+  if (!res.ok) throw new Error(`Error obteniendo producto (${res.status})`);
   return res.json();
 }
 

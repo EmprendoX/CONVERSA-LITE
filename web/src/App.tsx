@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useReducer } from 'react';
+import { useCallback, useEffect, useReducer, useState } from 'react';
 import ChatControls from './components/ChatControls';
 import ChatWindow from './components/ChatWindow';
 import AdminPanel from './components/AdminPanel';
-import { postChatMessage, streamChatMessage, type ConversationMessage, type MessageRole } from './api/client';
+import SuggestedProducts from './components/SuggestedProducts';
+import CalendarModal from './components/CalendarModal';
+import ProductsGrid from './components/ProductsGrid';
+import ProductDetail from './components/ProductDetail';
+import { postChatMessage, streamChatMessage, type ConversationMessage, type MessageRole, type ChatResponsePayload } from './api/client';
 
 interface ChatState {
   sessionId: string;
@@ -11,6 +15,7 @@ interface ChatState {
   input: string;
   isLoading: boolean;
   error: string | null;
+  suggestions: ChatResponsePayload['ragResults'] | null;
 }
 
 interface StoredChatState {
@@ -24,7 +29,8 @@ const BASE_STATE: ChatState = {
   messages: [],
   input: '',
   isLoading: false,
-  error: null
+  error: null,
+  suggestions: null
 };
 
 type ChatAction =
@@ -35,7 +41,8 @@ type ChatAction =
   | { type: 'SET_ERROR'; error: string | null }
   | { type: 'SET_SESSION_ID'; sessionId: string }
   | { type: 'RESET_CONVERSATION'; sessionId: string }
-  | { type: 'UPDATE_LAST_ASSISTANT'; content: string };
+  | { type: 'UPDATE_LAST_ASSISTANT'; content: string }
+  | { type: 'SET_SUGGESTIONS'; suggestions: ChatResponsePayload['ragResults'] | null };
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
@@ -57,7 +64,8 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         sessionId: action.sessionId,
         messages: [],
         input: '',
-        error: null
+        error: null,
+        suggestions: null
       };
     case 'UPDATE_LAST_ASSISTANT': {
       const messages = [...state.messages];
@@ -69,6 +77,8 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       }
       return { ...state, messages };
     }
+    case 'SET_SUGGESTIONS':
+      return { ...state, suggestions: action.suggestions };
     default:
       return state;
   }
@@ -76,6 +86,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
 
 const App = (): JSX.Element => {
   const [state, dispatch] = useReducer(chatReducer, BASE_STATE, initializeState);
+  const [openCalendar, setOpenCalendar] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -116,6 +127,9 @@ const App = (): JSX.Element => {
           accumulated += evt.delta;
           dispatch({ type: 'UPDATE_LAST_ASSISTANT', content: accumulated });
         }
+        if (evt.ragResults) {
+          dispatch({ type: 'SET_SUGGESTIONS', suggestions: evt.ragResults });
+        }
         if (evt.error) {
           throw new Error(evt.error);
         }
@@ -141,6 +155,34 @@ const App = (): JSX.Element => {
     dispatch({ type: 'RESET_CONVERSATION', sessionId: newSessionId });
   }, []);
 
+  const isEmbed = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embed') === '1';
+  const view = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('view') : null;
+  if (isEmbed) {
+    return (
+      <div className="app" style={{ padding: 0 }}>
+        <main className="app__card" style={{ maxWidth: 720 }}>
+          {view === 'products' ? (
+            <ProductsGrid />
+          ) : view === 'product' ? (
+            <ProductDetail id={new URLSearchParams(window.location.search).get('id') || ''} />
+          ) : (
+            <div className="panel-grid" style={{ gridTemplateColumns: '1fr' }}>
+              <ChatWindow
+                messages={state.messages}
+                inputValue={state.input}
+                onInputChange={handleInputChange}
+                onSendMessage={handleSendMessage}
+                isLoading={state.isLoading}
+                error={state.error}
+              />
+              <SuggestedProducts suggestions={state.suggestions ?? null} />
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <main className="app__card">
@@ -149,6 +191,9 @@ const App = (): JSX.Element => {
           <p className="app__subtitle">
             Prueba el agente comercial único, agrega memoria por sesión y decide si quieres usar el catálogo como contexto.
           </p>
+          <div className="app__actions">
+            <button type="button" onClick={() => setOpenCalendar(true)}>Agendar cita</button>
+          </div>
         </header>
 
         <div className="panel-grid">
@@ -167,7 +212,9 @@ const App = (): JSX.Element => {
             isLoading={state.isLoading}
             error={state.error}
           />
+          <SuggestedProducts suggestions={state.suggestions ?? null} />
           <AdminPanel />
+          <CalendarModal open={openCalendar} onClose={() => setOpenCalendar(false)} />
         </div>
       </main>
     </div>
