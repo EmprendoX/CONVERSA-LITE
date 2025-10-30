@@ -1,34 +1,64 @@
 import OpenAI from "openai";
-import fs from "fs";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+import { config } from "../config/index.js";
 
-let openai = null;
+let openaiClient = null;
+const agentCache = new Map();
 
-function getOpenAI() {
-  if (!openai) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error("OPENAI_API_KEY no está configurada en .env");
-    }
-    openai = new OpenAI({ apiKey });
+function getOpenAIClient() {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: config.openai.apiKey });
   }
-  return openai;
+  return openaiClient;
 }
 
-export async function responderAgente(role = "ventas", mensaje, contexto = {}) {
-  const agente = JSON.parse(fs.readFileSync(`src/agents/${role}.json`, "utf8"));
-  const prompt = agente.prompt;
-  
-  const messages = [
-    { role: "system", content: prompt },
-    { role: "user", content: mensaje },
-    ...(contexto.catalogo ? [{ role: "system", content: `Catálogo: ${JSON.stringify(contexto.catalogo)}` }] : [])
-  ];
-  
-  const client = getOpenAI();
-  const response = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages
-  });
-  
-  return response.choices[0].message.content;
+async function readAgentFile(agentName) {
+  if (agentCache.has(agentName)) {
+    return agentCache.get(agentName);
+  }
+
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const agentPath = path.resolve(__dirname, `../agents/${agentName}.json`);
+  const raw = await fs.readFile(agentPath, "utf8");
+  const data = JSON.parse(raw);
+  agentCache.set(agentName, data);
+  return data;
 }
+
+export async function getAgentProfile(agentName = "ventas") {
+  try {
+    return await readAgentFile(agentName);
+  } catch (error) {
+    throw new Error(`No se pudo cargar la configuración del agente '${agentName}': ${error.message}`);
+  }
+}
+
+export async function createChatCompletion(messages, options = {}) {
+  const client = getOpenAIClient();
+  const response = await client.chat.completions.create({
+    model: options.model || config.openai.defaultModel,
+    messages,
+    temperature: options.temperature ?? 0.7,
+    max_tokens: options.maxTokens
+  });
+
+  return response.choices[0]?.message?.content || "";
+}
+
+export async function createEmbedding(input, options = {}) {
+  const client = getOpenAIClient();
+  const response = await client.embeddings.create({
+    model: options.model || config.openai.defaultEmbeddingModel,
+    input
+  });
+  return response.data[0]?.embedding || [];
+}
+
+export default {
+  getAgentProfile,
+  createChatCompletion,
+  createEmbedding
+};
