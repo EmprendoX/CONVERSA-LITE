@@ -32,7 +32,7 @@ const MessageInput: FC<MessageInputProps> = ({ value, onChange, onSubmit, disabl
   return (
     <div className="message-input">
       <form onSubmit={handleSubmit}>
-        <label className="agent-settings__label" htmlFor="chat-input">
+        <label className="message-input__label" htmlFor="chat-input">
           Mensaje
         </label>
         <textarea

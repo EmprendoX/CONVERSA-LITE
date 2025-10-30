@@ -20,19 +20,19 @@ function formatCatalogContext(items) {
 }
 
 export async function runSingleAgent({
-  agent = "ventas",
   userMessage,
   sessionId,
-  topK = 3
+  topK = 3,
+  useCatalog = true
 }) {
   if (!userMessage) {
     throw new Error("userMessage es obligatorio");
   }
 
-  const agentProfile = await getAgentProfile(agent);
+  const agentProfile = await getAgentProfile();
   const history = sessionId ? await memory.getMessages(sessionId) : [];
 
-  const ragResults = await retrieveRelevantItems(userMessage, { topK });
+  const ragResults = useCatalog ? await retrieveRelevantItems(userMessage, { topK }) : [];
   const ragContext = formatCatalogContext(ragResults);
 
   const messages = [

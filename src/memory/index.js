@@ -1,6 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
-import { config } from "../config/index.js";
-
 const inMemoryStore = new Map();
 
 function normaliseMessage(message) {
@@ -33,53 +30,7 @@ export const inMemoryMemory = {
   }
 };
 
-let supabaseClient = null;
-
-if (config.supabase.url && config.supabase.serviceRoleKey) {
-  supabaseClient = createClient(config.supabase.url, config.supabase.serviceRoleKey);
-}
-
-export const supabaseMemory = {
-  async getMessages(sessionId) {
-    if (!supabaseClient || !sessionId) {
-      return [];
-    }
-    const { data, error } = await supabaseClient
-      .from("conversaciones")
-      .select("role, content, created_at")
-      .eq("session_id", sessionId)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.error("Error obteniendo memoria desde Supabase:", error.message);
-      return [];
-    }
-
-    return (data || []).map((row) => ({
-      role: row.role,
-      content: row.content,
-      createdAt: row.created_at
-    }));
-  },
-  async addMessage(sessionId, message) {
-    if (!supabaseClient || !sessionId) {
-      return;
-    }
-    const normalised = normaliseMessage(message);
-    const { error } = await supabaseClient.from("conversaciones").insert({
-      session_id: sessionId,
-      role: normalised.role,
-      content: normalised.content,
-      created_at: normalised.createdAt
-    });
-
-    if (error) {
-      console.error("Error guardando memoria en Supabase:", error.message);
-    }
-  }
-};
-
-export const memory = supabaseClient ? supabaseMemory : inMemoryMemory;
-export const memoryProvider = supabaseClient ? "supabase" : "in-memory";
+export const memory = inMemoryMemory;
+export const memoryProvider = "in-memory";
 
 export default memory;

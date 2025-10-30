@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { config } from "../config/index.js";
 
 let openaiClient = null;
-const agentCache = new Map();
+let cachedAgentProfile = null;
 
 function getOpenAIClient() {
   if (!openaiClient) {
@@ -14,26 +14,25 @@ function getOpenAIClient() {
   return openaiClient;
 }
 
-async function readAgentFile(agentName) {
-  if (agentCache.has(agentName)) {
-    return agentCache.get(agentName);
+async function readAgentFile() {
+  if (cachedAgentProfile) {
+    return cachedAgentProfile;
   }
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
-  const agentPath = path.resolve(__dirname, `../agents/${agentName}.json`);
-  const raw = await fs.readFile(agentPath, "utf8");
-  const data = JSON.parse(raw);
-  agentCache.set(agentName, data);
-  return data;
+  const agentPath = path.resolve(__dirname, "../agents/primary.json");
+  try {
+    const raw = await fs.readFile(agentPath, "utf8");
+    cachedAgentProfile = JSON.parse(raw);
+    return cachedAgentProfile;
+  } catch (error) {
+    throw new Error(`No se pudo cargar la configuración del agente único: ${error.message}`);
+  }
 }
 
-export async function getAgentProfile(agentName = "ventas") {
-  try {
-    return await readAgentFile(agentName);
-  } catch (error) {
-    throw new Error(`No se pudo cargar la configuración del agente '${agentName}': ${error.message}`);
-  }
+export async function getAgentProfile() {
+  return readAgentFile();
 }
 
 export async function createChatCompletion(messages, options = {}) {
