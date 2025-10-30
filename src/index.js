@@ -1,14 +1,8 @@
-import express from "express";
-import dotenv from "dotenv";
-import whatsappRouter from "./routes/whatsapp.js";
+import { config } from "./config/index.js";
+import createServer from "./server.js";
 
-dotenv.config();
+const app = createServer();
 
-const app = express();
-
-app.use(express.json());
-
-app.use("/api", whatsappRouter);
-
-app.listen(3000, () => console.log("✅ ConversaX Agent Kit v1 corriendo en http://localhost:3000"));
-
+app.listen(config.server.port, () => {
+  console.log(`✅ ConversaX Agent Kit v1 corriendo en http://localhost:${config.server.port}`);
+});
