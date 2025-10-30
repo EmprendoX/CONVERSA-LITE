@@ -1,0 +1,19 @@
+{
+  "productos": [
+    {
+      "id": 1,
+      "nombre": "Producto Ejemplo 1",
+      "descripcion": "Descripción del producto",
+      "precio": 999,
+      "categoria": "Categoría 1"
+    },
+    {
+      "id": 2,
+      "nombre": "Producto Ejemplo 2",
+      "descripcion": "Descripción del producto",
+      "precio": 1499,
+      "categoria": "Categoría 2"
+    }
+  ]
+}
+

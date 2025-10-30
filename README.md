@@ -1,28 +1,35 @@
-# ConversaX Lite Web Chat Automation MVP
+# ConversaX Agent Kit v1
 
-Chat inteligente simple con React + Express + LLM (OpenAI o Generic HTTP).
+Sistema modular de agentes inteligentes para WhatsApp con integración OpenAI y Supabase.
 
-## Estructura del Proyecto
+## Características
+
+- 🤖 Agentes modulares con roles personalizables (ventas, soporte, general)
+- 🧠 Integración con OpenAI (GPT-4o-mini)
+- 📊 Clasificación automática de leads (BANT)
+- 💾 Guardado de conversaciones en Supabase
+- 📱 Integración con Meta WhatsApp API
+- 🚀 Listo para desplegar en Netlify
+
+## Estructura
 
 ```
-conversax-lite/
-├── server/              # Backend Node.js + Express
-│   ├── app.ts          # Express app principal
-│   ├── routes/         # Endpoints API
-│   │   └── chat.ts     # POST /api/chat
-│   └── lib/            # Lógica de negocio
-│       ├── llm.ts      # Abstracción LLM
-│       ├── logger.ts   # Logger opcional
-│       ├── validators.ts
-│       └── rag.ts      # RAG placeholder
-├── web/                # Frontend React + Vite + Tailwind
-│   ├── index.html
-│   └── src/
-│       ├── components/ # Componentes React
-│       └── styles/     # Tailwind CSS
-├── data/               # Logs opcionales (JSON)
-├── system-prompt.txt   # Prompt del sistema
-└── .env.example        # Variables de entorno
+src/
+├── index.js              # Servidor principal
+├── routes/
+│   └── whatsapp.js       # Webhook de WhatsApp
+├── agents/
+│   ├── ventas.json       # Configuración agente de ventas
+│   ├── soporte.json      # Configuración agente de soporte
+│   └── general.json      # Configuración agente general
+├── services/
+│   ├── openaiService.js  # Comunicación con OpenAI
+│   ├── supabaseService.js# Guardado en Supabase
+│   └── bantScoring.js    # Evaluación de leads
+├── utils/
+│   └── messageParser.js  # Parser de mensajes
+└── data/
+    └── catalogo.json     # Catálogo de productos
 ```
 
 ## Instalación
@@ -37,51 +44,30 @@ npm install
 cp .env.example .env
 ```
 
-Editar `.env` y agregar tu `OPENAI_API_KEY`.
+Editar `.env` y agregar:
+- `OPENAI_API_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_KEY`
+- `META_ACCESS_TOKEN`
+- `META_PHONE_ID`
+- `VERIFY_TOKEN`
 
-3. Ejecutar en desarrollo:
+## Uso
+
+Iniciar servidor:
 ```bash
-npm run dev
+npm start
 ```
 
-Esto iniciará:
-- Backend en `http://localhost:8080`
-- Frontend en `http://localhost:5173` (Vite dev server)
+El servidor correrá en `http://localhost:3000`
 
-## Scripts
+## Webhook
 
-- `npm run dev` - Ejecuta backend + frontend en paralelo
-- `npm run dev:server` - Solo backend
-- `npm run dev:web` - Solo frontend
-- `npm run build` - Build de producción
-- `npm run start` - Ejecutar build de producción
+Configurar el webhook de WhatsApp para que apunte a:
+```
+POST https://tu-dominio.com/api/webhook
+```
 
-## Variables de Entorno
+## Licencia
 
-Ver `.env.example` para todas las opciones disponibles.
-
-Principales:
-- `OPENAI_API_KEY` - Requerido para OpenAI
-- `LLM_PROVIDER` - `openai` (default) o `generic`
-- `LLM_MODEL` - Modelo a usar (default: `gpt-4o-mini`)
-- `SYSTEM_PROMPT_PATH` - Ruta al archivo de prompt (default: `./system-prompt.txt`)
-- `ENABLE_FILE_LOGS` - Habilitar logs a archivo (default: `false`)
-
-## Características MVP
-
-- ✅ Chat web funcional con React + Tailwind
-- ✅ Backend Express con `/api/chat`
-- ✅ Integración OpenAI (configurable)
-- ✅ Soporte para Generic HTTP LLM
-- ✅ Logger opcional a archivo JSON
-- ✅ Sistema de prompts desde archivo
-- ✅ Health check endpoint (`/health`)
-
-## Próximos Pasos (Roadmap)
-
-- Streaming por SSE
-- Integración WhatsApp Cloud API
-- RAG con CSV de catálogo
-- Voz con ElevenLabs
-- Analytics avanzados
-
+ISC
